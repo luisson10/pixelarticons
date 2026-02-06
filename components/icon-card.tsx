@@ -28,7 +28,7 @@ export function IconCard({ name, size }: IconCardProps) {
         style={{ width: size, height: size }}
       >
         <img
-          src={`/svg/${name}.svg`}
+          src={`/api/icons/${name}`}
           alt={name}
           className="w-full h-full"
           style={{ width: size, height: size }}
