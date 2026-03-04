@@ -1,5 +1,6 @@
 # pixelarticons specific
 index.html
+icons.html
 .DS_Store
 package-lock.json
 
@@ -67,3 +68,4 @@ typings/
 
 # dist files
 fonts/
+react/

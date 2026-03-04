@@ -1,14 +1,24 @@
 {
   "name": "pixelarticons",
-  "version": "1.8.1",
+  "version": "2.0.2",
   "description": "Finest handmade pixelart icons.",
   "main": "index.js",
+  "peerDependencies": {
+    "react": ">=16"
+  },
+  "bin": {
+    "pixelarticons": "bin/upgrade.js"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "font": "svgtofont --sources ./svg --output ./fonts",
+    "generate:react": "node scripts/generate-react.js",
+    "prepublishOnly": "npm run generate:react",
+    "validate": "node scripts/validate-icons.js",
+    "browser": "node scripts/generate-browser.js && open icons.html",
     "test": "echo \"Error: no test specified\""
   },
   "dependencies": {
