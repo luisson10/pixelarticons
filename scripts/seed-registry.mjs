@@ -1,11 +1,10 @@
 /**
  * Seed the icon registry.
  *
- * Usage:
- *   node scripts/seed-registry.mjs           → stamps ALL icons as "old" (30 days ago)
- *   node scripts/seed-registry.mjs --new abc def  → stamps specific icons as "today"
- *
- * Run this after a sync to mark newly added icons as new.
+ * Fetches the full icon list from GitHub API and writes icon-registry.json,
+ * stamping every existing icon 30 days in the past so none show as "new".
+ * Future icons added after this baseline will be stamped with today's date
+ * and will display the NEW badge for 2 weeks.
  */
 
 import fs from 'fs';
@@ -15,48 +14,51 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const REGISTRY_PATH = path.join(ROOT, 'icon-registry.json');
-const SVG_DIR = path.join(ROOT, 'svg');
+const GITHUB_API_URL = 'https://api.github.com/repos/luisson10/pixelarticons/contents/svg';
 
 const OLD_DATE = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-const NOW = new Date().toISOString();
 
-// Parse --new flag
-const args = process.argv.slice(2);
-const newFlagIdx = args.indexOf('--new');
-const explicitNew = newFlagIdx !== -1 ? args.slice(newFlagIdx + 1) : [];
-
-// Read existing registry (or start fresh)
-let registry = {};
-if (fs.existsSync(REGISTRY_PATH)) {
-  registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf-8'));
+async function fetchAllIconNames() {
+  console.log('Fetching icon list from GitHub API...');
+  const res = await fetch(GITHUB_API_URL, {
+    headers: { Accept: 'application/vnd.github+json' },
+  });
+  if (!res.ok) throw new Error(`GitHub API responded with ${res.status}`);
+  const data = await res.json();
+  return data
+    .filter((f) => f.type === 'file' && f.name.endsWith('.svg'))
+    .map((f) => f.name.replace('.svg', ''))
+    .sort();
 }
 
-// Read all SVG names
-const allIcons = fs
-  .readdirSync(SVG_DIR)
-  .filter((f) => f.endsWith('.svg'))
-  .map((f) => f.replace('.svg', ''));
+async function main() {
+  const allIcons = await fetchAllIconNames();
+  console.log(`Found ${allIcons.length} icons on GitHub.`);
 
-let added = 0;
-let markedNew = 0;
-
-for (const name of allIcons) {
-  if (explicitNew.includes(name)) {
-    // Force mark as new
-    registry[name] = NOW;
-    markedNew++;
-  } else if (!registry[name]) {
-    // Never seen before → treat as old baseline
-    registry[name] = OLD_DATE;
-    added++;
+  // Load existing registry so we don't overwrite already-tracked icons
+  let registry = {};
+  if (fs.existsSync(REGISTRY_PATH)) {
+    try {
+      registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf-8'));
+      console.log(`Loaded existing registry with ${Object.keys(registry).length} entries.`);
+    } catch {
+      console.warn('Could not parse existing registry — starting fresh.');
+    }
   }
-  // Already in registry → leave untouched
+
+  let seeded = 0;
+  for (const name of allIcons) {
+    if (!registry[name]) {
+      registry[name] = OLD_DATE;
+      seeded++;
+    }
+  }
+
+  fs.writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2), 'utf-8');
+  console.log(`Done. Seeded ${seeded} icons as "old". Registry saved to icon-registry.json.`);
 }
 
-fs.writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2), 'utf-8');
-
-console.log(`Registry updated:`);
-console.log(`  ${allIcons.length} total icons`);
-console.log(`  ${added} newly seeded as old`);
-console.log(`  ${markedNew} explicitly marked as new`);
-console.log(`  Written to ${REGISTRY_PATH}`);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
