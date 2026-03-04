@@ -10,8 +10,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 GITHUB_API_URL = "https://api.github.com/repos/luisson10/pixelarticons/contents/svg"
-ROOT = os.path.join(os.path.dirname(__file__), "..")
-REGISTRY_PATH = os.path.join(ROOT, "icon-registry.json")
+REGISTRY_PATH = "icon-registry.json"
 
 old_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
 
